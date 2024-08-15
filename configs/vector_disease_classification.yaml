@@ -1,0 +1,56 @@
+seed_everything: 77
+trainer:
+  default_root_dir: ./results/vector_train_all_test_all_77
+  accelerator: cuda
+  devices: 1
+  log_every_n_steps: 1
+  max_epochs: 100
+
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.RichProgressBar
+    - class_path: lightning.pytorch.callbacks.EarlyStopping
+      init_args:
+        monitor: 'val_loss'
+        patience: 5
+        mode: 'min'  # or 'max' depending on your metric
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        monitor: 'val_loss'
+        mode: 'min'  # or 'max' depending on your metric
+        save_top_k: 1  # save only the best checkpoint
+        dirpath: ./results/vector_train_all_test_all_77/checkpoints
+        filename: 'best_val_loss-{epoch:02d}-{val_loss:.4f}'
+
+data: #data.DataModule
+  train_dataset:
+    class_path: data.vector.dataset_class.VecDataset_All
+    init_args:
+      info_df_path_mimic: /local/home/mikailk/fairness_on_embeddings/dataframes/mimic_train_df.csv
+      data_path_mimic: /local/home/mikailk/fairness_on_embeddings/embedding_data/generalized-image-embeddings-for-the-mimic-chest-x-ray-dataset-1.0/
+  val_dataset:
+    class_path: data.vector.dataset_class.VecDataset_All
+    init_args:
+      info_df_path_mimic:  /local/home/mikailk/fairness_on_embeddings/dataframes/mimic_validation_df.csv
+      data_path_mimic: /local/home/mikailk/fairness_on_embeddings/embedding_data/generalized-image-embeddings-for-the-mimic-chest-x-ray-dataset-1.0/
+  test_dataset:
+    class_path: data.vector.dataset_class.VecDataset_All
+    init_args:
+      info_df_path_mimic:  /local/home/mikailk/fairness_on_embeddings/dataframes/mimic_test_df.csv
+      data_path_mimic: /local/home/mikailk/fairness_on_embeddings/embedding_data/generalized-image-embeddings-for-the-mimic-chest-x-ray-dataset-1.0/
+      
+  batch_size: 256
+  num_workers: 35
+  prediction_on: "val"
+
+model: # models.module.CLS
+  model:
+    class_path: models.vector.models.CustomModel
+    init_args:
+      embeddings_size: 1376
+      hidden_layer_sizes: [768, 256]
+      dropout_rate: 0.3
+      num_classes: 14
+  criterion: #
+    class_path: torch.nn.BCEWithLogitsLoss
+  prediction_on: "val"
+  save_probabilities_path: ./results/vector_train_all_test_all_77/probabilities
